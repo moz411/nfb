@@ -12,19 +12,14 @@ from matplotlib import cm, colors
 import matplotlib.patches as mpatches
 from mne.time_frequency import psd_array_multitaper
 from brainflow.board_shim import BoardShim, BoardIds
+from flask import Flask, jsonify
 
-
-# Retrieve Job-defined env vars
-TASK_INDEX = os.getenv("CLOUD_RUN_TASK_INDEX", 0)
-TASK_ATTEMPT = os.getenv("CLOUD_RUN_TASK_ATTEMPT", 0)
-# Retrieve User-defined env vars
-SLEEP_MS = os.getenv("SLEEP_MS", 0)
-FAIL_RATE = os.getenv("FAIL_RATE", 0)
+app = Flask(__name__)
 
 
 # Define main script
-def main(uuid, sessionid, boardid):
-    bucket = 'nfb01'
+@app.route('/report/<string:uuid>/<string:sessionid>/<int:boardid>')
+    bucket = os.environ.get("BUCKET")
     storage_client = storage.Client()
     bucket = storage_client.bucket(bucket)
 
@@ -111,17 +106,9 @@ def main(uuid, sessionid, boardid):
     image = io.BytesIO()
     plt.savefig(image, bbox_inches='tight', format='png')
     image.seek(0)
-    bands['image'] = base64.b64encode(image.read()).decode()
-    return bands
+    bands['bandpower'] = base64.b64encode(image.read()).decode()
+    return jsonify(bands)
 
 # Start script
 if __name__ == "__main__":
-    try:
-        uuid, sessionid, boardid = sys.argv[1:]
-        main(uuid, sessionid, boardid)
-    except Exception as err:
-        message = f"Task #{TASK_INDEX}, " \
-                  + f"Attempt #{TASK_ATTEMPT} failed: {str(err)}"
-
-        print(json.dumps({"message": message, "severity": "ERROR"}))
-        sys.exit(1)  # Retry Job Task by exiting the process
+    app.run(debug=True, host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
