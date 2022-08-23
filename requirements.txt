@@ -1,0 +1,6 @@
+google-cloud-storage
+matplotlib
+pandas
+scipy
+mne
+brainflow
