@@ -18,7 +18,7 @@ app = Flask(__name__)
 
 
 # Define main script
-@app.route('/report/<string:uuid>/<string:sessionid>/<int:boardid>')
+@app.route('/<string:uuid>/<string:sessionid>/<int:boardid>')
 def report(uuid, sessionid, boardid):
     bucket = os.environ.get("BUCKET_NAME")
     storage_client = storage.Client()
