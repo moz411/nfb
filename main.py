@@ -4,6 +4,9 @@ from google.cloud import storage
 from flask import Flask, request
 
 from report import report
+from jinja2 import Environment, FileSystemLoader, select_autoescape
+
+jinja_env = Environment(loader=FileSystemLoader('.'))
 
 app = Flask(__name__)
 
@@ -15,7 +18,7 @@ def generate(uuid, sessionid):
     res = threading.Thread(target=report, args=(uuid,sessionid,board_id))
     res.start()
     return('OK')
-
+  
 # Request existing results
 @app.route('/<string:uuid>/<string:sessionid>', methods = ['GET'])
 def retreive(uuid, sessionid):

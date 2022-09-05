@@ -4,13 +4,18 @@ import base64
 import json
 import numpy as np
 import pandas as pd
+import seaborn as sns
 from scipy.integrate import simpson
 import matplotlib.pyplot as plt
 from google.cloud import storage
-from matplotlib import cm, colors 
+from matplotlib import cm, colors
+import matplotlib.dates as mdates
 import matplotlib.patches as mpatches
 from mne.time_frequency import psd_array_multitaper
 from brainflow.board_shim import BoardShim
+from jinja2 import Environment, FileSystemLoader, select_autoescape
+
+jinja_env = Environment(loader=FileSystemLoader('.'))
 
 # Generate report
 def report(uuid, sessionid, board_id):
@@ -65,6 +70,25 @@ def report(uuid, sessionid, board_id):
         if shift > len(meandata) * .95:
             meandata = meandata[:shift]
 
+    # boxplots
+    sns.set(rc={"figure.figsize":(15, 10)})
+    ax = sns.boxplot(whis=100, data=data, palette="Set3", order=data.columns.to_list().sort())
+    ax.set_xlabel('Canaux EEG')
+    ax.set_ylabel('Tension (μV)')
+    image = io.BytesIO()
+    plt.savefig(image, bbox_inches='tight', format='png')
+    image.seek(0)
+    boxplots = base64.b64encode(image.read()).decode()
+
+    # Timeserie
+    ax = data.plot(subplots=True, figsize=(15,15))
+    ax[0].xaxis.set_major_locator(mdates.MinuteLocator(interval=1))
+    ax[0].xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
+    image = io.BytesIO()
+    plt.savefig(image, bbox_inches='tight', format='png')
+    image.seek(0)
+    timeserie = base64.b64encode(image.read()).decode()
+
     # bandpower
     bands = {'Delta': {'low': 0,  'high': 4},
             'Theta':  {'low': 4,  'high': 8},
@@ -91,7 +115,7 @@ def report(uuid, sessionid, board_id):
         # compute integral
         freq_res = psd.index[1] - psd.index[0]
         score = simpson(psd[idx_delta].fillna(0).values[:,0], dx=freq_res)
-        bands[band] = score
+        bands[band] = round(score, 2)
         # plot
         plt.fill_between(x=psd.index, y1=psd.values[:,0], y2=0, where=idx_delta, color=color)
         patches.append(mpatches.Patch(color=color, label='%s: %d' % (band, score)))
@@ -100,7 +124,18 @@ def report(uuid, sessionid, board_id):
     image = io.BytesIO()
     plt.savefig(image, bbox_inches='tight', format='png')
     image.seek(0)
-    bands['bandpower'] = base64.b64encode(image.read()).decode()
+    bandpower = base64.b64encode(image.read()).decode()
+    
+    # generate report
+    template = jinja_env.get_template("report.html")
+    res = template.render(title="nfb@moz42.net", bands=bands, bandpower=bandpower, timeserie=timeserie, boxplots=boxplots)
+
+    # save report to GCS
+    destination_blob_name = '%s/%s/report.html' % (uuid, sessionid)
+    blob = bucket.blob(destination_blob_name)
+    blob.upload_from_string(res)
+
+    # save results to GCS
     destination_blob_name = '%s/%s/results.json' % (uuid, sessionid)
     blob = bucket.blob(destination_blob_name)
     blob.upload_from_string(json.dumps(bands))
