@@ -127,6 +127,15 @@ def report(uuid, sessionid, board_id):
     image.seek(0)
     bandpower = base64.b64encode(image.read()).decode()
     
+    # phase spectrum
+    plt.plot()
+    for i, channel in enumerate(data.columns):
+        plt.phase_spectrum(data[channel].fillna(0))
+    image = io.BytesIO()
+    plt.savefig(image, bbox_inches='tight', format='png')
+    image.seek(0)
+    bands['phase_spectrum'] = base64.b64encode(image.read()).decode()
+
     # generate report
     template = jinja_env.get_template("report.html")
     res = template.render(title="nfb@moz42.net", bands=bands, bandpower=bandpower, timeserie=timeserie, boxplots=boxplots)
