@@ -1,6 +1,7 @@
 import io
 import os
 import base64
+import datetime
 import json
 import numpy as np
 import pandas as pd
@@ -134,6 +135,7 @@ def report(uuid, sessionid, board_id):
     destination_blob_name = '%s/%s/report.html' % (uuid, sessionid)
     blob = bucket.blob(destination_blob_name)
     blob.upload_from_string(res)
+    bands['url'] = blob.generate_signed_url(expiration=datetime.timedelta(days=365), method="GET")
 
     # save results to GCS
     destination_blob_name = '%s/%s/results.json' % (uuid, sessionid)

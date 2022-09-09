@@ -15,10 +15,8 @@ app = Flask(__name__)
 @app.route('/<string:uuid>/<string:sessionid>', methods = ['POST'])
 def generate(uuid, sessionid):
     board_id = int(request.form.get('board_id'))
-    # res = threading.Thread(target=report, args=(uuid,sessionid,board_id))
-    # res.start()
     report(uuid,sessionid,board_id)
-    return('OK')
+    return('Report %s generated' % sessionid)
   
 # Request existing results
 @app.route('/<string:uuid>/<string:sessionid>', methods = ['GET'])
