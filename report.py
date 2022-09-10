@@ -138,13 +138,15 @@ def report(uuid, sessionid, board_id):
 
     # generate report
     template = jinja_env.get_template("report.html")
-    res = template.render(title="nfb@moz42.net", bands=bands, bandpower=bandpower, timeserie=timeserie, boxplots=boxplots)
+    res = template.render(title="nfb@moz42.net", bands=bands, bandpower=bandpower, 
+                          timeserie=timeserie, boxplots=boxplots)
 
     # save report to GCS
     destination_blob_name = '%s/%s/report.html' % (uuid, sessionid)
     blob = bucket.blob(destination_blob_name)
     blob.upload_from_string(res)
-    bands['url'] = blob.generate_signed_url(expiration=datetime.timedelta(days=365), method="GET")
+    bands['url'] = blob.generate_signed_url(expiration=datetime.timedelta(days=365), method="GET",
+                                            credentials=storage_client._credentials)
 
     # save results to GCS
     destination_blob_name = '%s/%s/results.json' % (uuid, sessionid)
