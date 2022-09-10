@@ -9,6 +9,7 @@ import seaborn as sns
 from scipy.integrate import simpson
 import matplotlib.pyplot as plt
 from google.cloud import storage
+import google.auth
 from matplotlib import cm, colors
 import matplotlib.dates as mdates
 import matplotlib.patches as mpatches
@@ -145,8 +146,6 @@ def report(uuid, sessionid, board_id):
     destination_blob_name = '%s/%s/report.html' % (uuid, sessionid)
     blob = bucket.blob(destination_blob_name)
     blob.upload_from_string(res)
-    bands['url'] = blob.generate_signed_url(expiration=datetime.timedelta(days=365), method="GET",
-                                            credentials=storage_client._credentials)
 
     # save results to GCS
     destination_blob_name = '%s/%s/results.json' % (uuid, sessionid)
