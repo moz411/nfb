@@ -14,8 +14,8 @@ app = Flask(__name__)
 @app.route('/<string:uuid>/<string:sessionid>', methods = ['POST'])
 def generate(uuid, sessionid):
     board_id = int(request.form.get('board_id'))
-    report(uuid,sessionid,board_id)
-    return('Report %s generated' % sessionid)
+    # report(uuid,sessionid,board_id)
+    return(report(uuid,sessionid,board_id))
   
 # Request existing results.json
 @app.route('/<string:uuid>/<string:sessionid>/<string:filename>', methods = ['GET'])

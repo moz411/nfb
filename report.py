@@ -148,6 +148,7 @@ def report(uuid, sessionid, board_id):
     blob.upload_from_string(res)
 
     # save results to GCS
-    destination_blob_name = '%s/%s/results.json' % (uuid, sessionid)
-    blob = bucket.blob(destination_blob_name)
-    blob.upload_from_string(json.dumps(bands))
+    # destination_blob_name = '%s/%s/results.json' % (uuid, sessionid)
+    # blob = bucket.blob(destination_blob_name)
+    # blob.upload_from_string(json.dumps(bands))
+    return(json.dumps(bands))
