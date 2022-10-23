@@ -72,24 +72,36 @@ def report(uuid, sessionid, board_id):
         if shift > len(meandata) * .95:
             meandata = meandata[:shift]
 
+    # phase spectrum
+    plt.plot(figsize=(15,5))
+    for i, channel in enumerate(data.columns):
+        plt.phase_spectrum(data[channel].fillna(0))
+    phase_image = io.BytesIO()
+    plt.savefig(phase_image, bbox_inches='tight', format='png')
+    phase_image.seek(0)
+    phase_image = base64.b64encode(phase_image.read()).decode()
+    plt.clf()
+
     # boxplots
     sns.set(rc={"figure.figsize":(15, 10)})
     ax = sns.boxplot(whis=100, data=data, palette="Set3", order=data.columns.to_list().sort())
     ax.set_xlabel('Canaux EEG')
     ax.set_ylabel('Tension (μV)')
-    image = io.BytesIO()
-    plt.savefig(image, bbox_inches='tight', format='png')
-    image.seek(0)
-    boxplots = base64.b64encode(image.read()).decode()
+    boxplots = io.BytesIO()
+    plt.savefig(boxplots, bbox_inches='tight', format='png')
+    boxplots.seek(0)
+    boxplots = base64.b64encode(boxplots.read()).decode()
 
     # Timeserie
     ax = data.plot(subplots=True, figsize=(15,15))
     ax[0].xaxis.set_major_locator(mdates.MinuteLocator(interval=1))
     ax[0].xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
-    image = io.BytesIO()
-    plt.savefig(image, bbox_inches='tight', format='png')
-    image.seek(0)
-    timeserie = base64.b64encode(image.read()).decode()
+    timeserie = io.BytesIO()
+    plt.savefig(timeserie, bbox_inches='tight', format='png')
+    timeserie.seek(0)
+    timeserie = base64.b64encode(timeserie.read()).decode()
+
+
 
     # bandpower
     bands = {'Delta': {'low': 0,  'high': 4},
@@ -123,23 +135,14 @@ def report(uuid, sessionid, board_id):
         patches.append(mpatches.Patch(color=color, label='%s: %d' % (band, score)))
         
     ax.legend(handles=patches)
-    image = io.BytesIO()
-    plt.savefig(image, bbox_inches='tight', format='png')
-    image.seek(0)
-    bandpower = base64.b64encode(image.read()).decode()
-    
-    # phase spectrum
-    plt.plot()
-    for i, channel in enumerate(data.columns):
-        plt.phase_spectrum(data[channel].fillna(0))
-    image = io.BytesIO()
-    plt.savefig(image, bbox_inches='tight', format='png')
-    image.seek(0)
-    bands['phase_spectrum'] = base64.b64encode(image.read()).decode()
+    bandpower = io.BytesIO()
+    plt.savefig(bandpower, bbox_inches='tight', format='png')
+    bandpower.seek(0)
+    bandpower = base64.b64encode(bandpower.read()).decode()
 
     # generate report
     template = jinja_env.get_template("report.html")
-    res = template.render(title="nfb@moz42.net", bands=bands, bandpower=bandpower, 
+    res = template.render(title="nfb@moz42.net", bands=bands, bandpower=bandpower, phase_spectrum=phase_image,
                           timeserie=timeserie, boxplots=boxplots)
 
     # save report to GCS
@@ -151,4 +154,6 @@ def report(uuid, sessionid, board_id):
     # destination_blob_name = '%s/%s/results.json' % (uuid, sessionid)
     # blob = bucket.blob(destination_blob_name)
     # blob.upload_from_string(json.dumps(bands))
+    
+    bands['phase_spectrum'] = phase_image # to be returned in payload from POST request
     return(json.dumps(bands))
